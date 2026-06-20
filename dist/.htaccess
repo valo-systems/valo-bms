@@ -1,6 +1,4 @@
 Options -MultiViews
-AddType image/svg+xml .svg .svgz
-
 RewriteEngine On
 
 # Redirect HTTP to HTTPS
