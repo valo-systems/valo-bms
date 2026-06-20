@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react'
-import { company as companyApi } from '../api/endpoints'
+import { useEffect, useRef, useState } from 'react'
+import { company as companyApi, documents as docsApi } from '../api/endpoints'
 import Button from '../components/ui/Button'
-import { Input, Textarea } from '../components/ui/Input'
+import Modal from '../components/ui/Modal'
+import { Input, Select, Textarea } from '../components/ui/Input'
 import { ListTable, ListRow } from '../components/ui/Table'
 import { Link } from 'react-router-dom'
 import {
   Building2, CreditCard, Users, Edit, Save, X,
   Shield, FileText, CheckCircle, Copy, ExternalLink,
   Phone, Mail, Globe, MapPin, Briefcase, ChevronRight,
+  Plus, Upload, Eye, Download, RefreshCw,
 } from 'lucide-react'
+import { format } from 'date-fns'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function Field({ label, value, mono, copyable, accent }) {
@@ -55,24 +58,121 @@ function BankCard({ label, fields }) {
 
 const TABS = ['Overview', 'Registration & Tax', 'Banking', 'Compliance', 'Team']
 
-const DOC_LIST = [
-  { name: 'CIPC Registration Certificate (COR14.3)', ref: 'COR14.3', status: 'available', category: 'Registration' },
-  { name: 'Notice of Incorporation (COR14.1)', ref: 'COR14.1', status: 'available', category: 'Registration' },
-  { name: 'Memorandum of Incorporation (COR15.1A)', ref: 'COR15.1A', status: 'available', category: 'Registration' },
-  { name: 'Director Details (COR14.1A)', ref: 'COR14.1A', status: 'available', category: 'Registration' },
-  { name: 'SARS Income Tax Registration', ref: 'TaxNumber', status: 'available', category: 'Tax' },
-  { name: 'Tax Compliance Status PIN', ref: 'TCS-PIN', status: 'pending', category: 'Tax' },
-  { name: 'PAYE / EMP Registration', ref: 'PAYE', status: 'pending', category: 'Tax' },
-  { name: 'FNB Account Confirmation Letter', ref: 'FNB-ACC', status: 'available', category: 'Banking' },
-  { name: 'FNB Gold Business - Proof of Address', ref: 'FNB-POA', status: 'available', category: 'Banking' },
-  { name: 'Capitec Business Account Confirmation', ref: 'CAP-ACC', status: 'available', category: 'Banking' },
-  { name: 'B-BBEE Level 1 Certificate (EME)', ref: 'BEE', status: 'available', category: 'Compliance' },
-  { name: 'Sworn B-BBEE Affidavit', ref: 'BEE-AFF', status: 'available', category: 'Compliance' },
-  { name: 'CSD Supplier Registration Report', ref: 'CSD', status: 'available', category: 'Compliance' },
-  { name: 'Company Proof of Address', ref: 'POA', status: 'available', category: 'Compliance' },
-]
-
+const COMPANY_CATS = ['compliance', 'banking', 'tax']
+const CAT_PREFIX = { compliance: 'COR', banking: 'BNK', tax: 'TAX' }
+const TYPE_COLORS = { compliance: 'text-blue-400', banking: 'text-green-400', tax: 'text-amber-400' }
 const STATUS_COLORS = { available: 'bg-green-900/40 text-green-400', pending: 'bg-amber-900/40 text-amber-400', missing: 'bg-red-900/40 text-red-400' }
+
+const today = new Date().toISOString().split('T')[0]
+const EMPTY_DOC = { name: '', category: 'compliance', ref: '', file_path: '', status: 'available', notes: '', date: today }
+
+function deriveRef(category, existingDocs) {
+  const year = new Date().getFullYear()
+  const prefix = `${CAT_PREFIX[category] || 'DOC'}-${year}-`
+  const nums = existingDocs
+    .map(d => d.ref || '')
+    .filter(r => r.startsWith(prefix))
+    .map(r => parseInt(r.replace(prefix, ''), 10))
+    .filter(n => !isNaN(n))
+  const next = nums.length ? Math.max(...nums) + 1 : 1
+  return `${prefix}${String(next).padStart(3, '0')}`
+}
+
+function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
+  const ref = useRef()
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [fileName, setFileName] = useState(currentPath ? currentPath.split('/').pop() : '')
+  const [error, setError] = useState('')
+
+  const handleFile = async (file) => {
+    if (!file) return
+    setUploading(true); setError(''); setProgress(0)
+    try {
+      const res = await docsApi.upload(file, (e) => {
+        if (e.total) setProgress(Math.round((e.loaded / e.total) * 100))
+      })
+      setFileName(file.name)
+      onUploaded(res.file_path)
+    } catch {
+      setError('Upload failed — check file type (PDF, image, Word) and size (max 20MB)')
+    } finally { setUploading(false); setProgress(0) }
+  }
+
+  return (
+    <div>
+      <label className="block text-valo-subtle text-xs font-medium uppercase tracking-wide mb-1.5">{label}</label>
+      <div onClick={() => ref.current?.click()} onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+        className="border border-dashed border-valo-border rounded-lg px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-valo-accent/50 transition-colors bg-valo-black">
+        <Upload size={15} className="text-valo-subtle shrink-0" />
+        <div className="flex-1 min-w-0">
+          {uploading ? (
+            <div className="space-y-1">
+              <div className="text-valo-subtle text-xs">Uploading… {progress}%</div>
+              <div className="h-1 bg-valo-border rounded-full overflow-hidden">
+                <div className="h-full bg-valo-accent transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          ) : fileName ? (
+            <span className="text-valo-text text-xs truncate block">{fileName}</span>
+          ) : (
+            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word — max 20MB)</span>
+          )}
+        </div>
+        {fileName && !uploading && (
+          <button type="button" onClick={e => { e.stopPropagation(); setFileName(''); onUploaded('') }}
+            className="text-valo-muted hover:text-valo-red transition-colors shrink-0"><X size={13} /></button>
+        )}
+      </div>
+      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+      <input ref={ref} type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+        onChange={e => handleFile(e.target.files[0])} />
+    </div>
+  )
+}
+
+function PreviewModal({ doc, onClose }) {
+  if (!doc) return null
+  const isPdf = doc.file_path?.toLowerCase().endsWith('.pdf')
+  const isImage = /\.(png|jpe?g|webp|gif)$/i.test(doc.file_path || '')
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-4 py-3 bg-valo-dark border-b border-valo-border shrink-0">
+        <div className="flex-1 min-w-0 mr-4">
+          <div className="text-valo-text font-semibold text-sm truncate">{doc.name}</div>
+          {doc.ref && <div className="text-valo-muted text-xs font-mono">{doc.ref}</div>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a href={doc.file_path} download
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-valo-accent text-valo-black text-xs font-semibold rounded-lg hover:bg-valo-accent-dim transition-colors">
+            <Download size={13} /> Download
+          </a>
+          <button onClick={onClose} className="p-1.5 text-valo-subtle hover:text-valo-text rounded-lg hover:bg-valo-card transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
+        {isPdf ? (
+          <iframe src={`${doc.file_path}#toolbar=1&navpanes=0`}
+            className="w-full h-full rounded-lg border border-valo-border bg-white" title={doc.name} />
+        ) : isImage ? (
+          <img src={doc.file_path} alt={doc.name} className="max-w-full max-h-full object-contain rounded-lg" />
+        ) : (
+          <div className="text-center text-valo-subtle space-y-4">
+            <FileText size={48} className="mx-auto opacity-30" />
+            <p className="text-sm">Preview not available for this file type.</p>
+            <a href={doc.file_path} download
+              className="inline-flex items-center gap-2 px-4 py-2 bg-valo-accent text-valo-black text-sm font-semibold rounded-lg">
+              <Download size={15} /> Download to view
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function Company() {
   const [data, setData] = useState(null)
@@ -80,28 +180,70 @@ export default function Company() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [docFilter, setDocFilter] = useState('All')
+  const [docFilter, setDocFilter] = useState('all')
+  const [docs, setDocs] = useState([])
+  const [docModalOpen, setDocModalOpen] = useState(false)
+  const [editDoc, setEditDoc] = useState(null)
+  const [docForm, setDocForm] = useState(EMPTY_DOC)
+  const [docSaving, setDocSaving] = useState(false)
+  const [previewDoc, setPreviewDoc] = useState(null)
 
   useEffect(() => {
     companyApi.get()
       .then(res => { const c = res.company || res; setData(c); setForm(c) })
       .catch(() => {})
+    docsApi.list()
+      .then(res => setDocs((res.documents || res).filter(d => COMPANY_CATS.includes(d.category))))
+      .catch(() => {})
   }, [])
 
   const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }))
+  const setDoc = (k) => (e) => setDocForm(p => ({ ...p, [k]: e.target.value }))
 
   const handleSave = async () => {
     setSaving(true)
-    try { const res = await companyApi.update(form); setData(form); setEditing(false) }
+    try { await companyApi.update(form); setData(form); setEditing(false) }
     catch { setData(form); setEditing(false) }
     finally { setSaving(false) }
+  }
+
+  const openNewDoc = () => {
+    setEditDoc(null)
+    setDocForm({ ...EMPTY_DOC, ref: deriveRef('compliance', docs) })
+    setDocModalOpen(true)
+  }
+  const openEditDoc = (doc) => { setEditDoc(doc); setDocForm({ ...doc }); setDocModalOpen(true) }
+
+  const handleCategoryChange = (e) => {
+    const category = e.target.value
+    setDocForm(p => ({ ...p, category, ref: !editDoc ? deriveRef(category, docs) : p.ref }))
+  }
+
+  const handleDocSave = async (e) => {
+    e.preventDefault()
+    setDocSaving(true)
+    try {
+      if (editDoc) {
+        const res = await docsApi.update(editDoc.id, docForm)
+        setDocs(prev => prev.map(d => d.id === editDoc.id ? { ...d, ...(res.document || res) } : d))
+      } else {
+        const res = await docsApi.create(docForm)
+        setDocs(prev => [...prev, { ...docForm, ...(res.document || res) }])
+      }
+      setDocModalOpen(false)
+    } catch {
+      if (!editDoc) setDocs(prev => [...prev, { ...docForm, id: Date.now() }])
+      setDocModalOpen(false)
+    } finally { setDocSaving(false) }
   }
 
   if (!data) return <div className="flex items-center justify-center h-64 text-valo-subtle">Loading…</div>
   const d = editing ? form : data
 
-  const docCategories = ['All', ...new Set(DOC_LIST.map(x => x.category))]
-  const filteredDocs = docFilter === 'All' ? DOC_LIST : DOC_LIST.filter(x => x.category === docFilter)
+  const docCategories = ['all', ...COMPANY_CATS]
+  const filteredDocs = docs.filter(doc =>
+    docFilter === 'all' || doc.category === docFilter
+  )
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -357,35 +499,51 @@ export default function Company() {
           {/* Document vault */}
           <div className="bg-valo-card border border-valo-border rounded-xl">
             <div className="px-5 py-4 border-b border-valo-border">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText size={15} className="text-valo-accent shrink-0" />
-                <span className="text-valo-text font-semibold text-sm">Document Vault</span>
-                <span className="text-valo-subtle text-xs">{DOC_LIST.filter(d => d.status === 'available').length}/{DOC_LIST.length} available</span>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText size={15} className="text-valo-accent shrink-0" />
+                  <span className="text-valo-text font-semibold text-sm">Company Documents</span>
+                  <span className="text-valo-subtle text-xs">{docs.filter(d => d.status === 'available').length}/{docs.length} available</span>
+                </div>
+                <Button size="sm" onClick={openNewDoc}><Plus size={13} /> Add</Button>
               </div>
-              {/* Filter tabs — scrollable */}
               <div className="flex gap-1 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
                 {docCategories.map(cat => (
                   <button key={cat} onClick={() => setDocFilter(cat)}
-                    className={`shrink-0 px-3 min-h-[32px] text-xs rounded-lg transition-colors whitespace-nowrap ${docFilter === cat ? 'bg-valo-accent text-valo-black font-medium' : 'text-valo-subtle hover:text-valo-text'}`}>
+                    className={`shrink-0 px-3 min-h-[32px] text-xs rounded-lg transition-colors whitespace-nowrap capitalize ${docFilter === cat ? 'bg-valo-accent text-valo-black font-medium' : 'text-valo-subtle hover:text-valo-text'}`}>
                     {cat}
                   </button>
                 ))}
               </div>
             </div>
-            <ListTable>
-              {filteredDocs.map(doc => (
-                <ListRow
-                  key={doc.ref}
-                  primary={doc.name}
-                  secondary={`${doc.ref} · ${doc.category}`}
-                  badge={
-                    <span className={`shrink-0 text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[doc.status]}`}>
+
+            {filteredDocs.length === 0 ? (
+              <div className="py-12 text-center text-valo-subtle text-sm">No documents yet</div>
+            ) : (
+              <div className="divide-y divide-valo-border">
+                {filteredDocs.map(doc => (
+                  <div key={doc.id} className="flex items-center gap-3 px-5 py-3">
+                    <FileText size={15} className={TYPE_COLORS[doc.category] || 'text-valo-subtle'} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-valo-text text-sm truncate">{doc.name}</div>
+                      <div className="text-valo-muted text-xs font-mono">{doc.ref}{doc.date ? ` · ${format(new Date(doc.date), 'd MMM yyyy')}` : ''}</div>
+                    </div>
+                    <span className={`shrink-0 text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[doc.status] || STATUS_COLORS.pending}`}>
                       {doc.status === 'available' ? 'Available' : doc.status === 'pending' ? 'Pending' : 'Missing'}
                     </span>
-                  }
-                />
-              ))}
-            </ListTable>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => openEditDoc(doc)} title="Edit" className="text-valo-muted hover:text-valo-text transition-colors"><RefreshCw size={12} /></button>
+                      {doc.file_path && (
+                        <>
+                          <a href={doc.file_path} download title="Download" className="text-valo-muted hover:text-valo-text transition-colors"><Download size={12} /></a>
+                          <button onClick={() => setPreviewDoc(doc)} title="Preview" className="text-valo-accent hover:text-valo-accent/80 transition-colors"><Eye size={12} /></button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* CIPC details */}
@@ -458,6 +616,47 @@ export default function Company() {
           </SectionCard>
         </div>
       )}
+
+      {/* Doc add/edit modal */}
+      <Modal open={docModalOpen} onClose={() => setDocModalOpen(false)}
+        title={editDoc ? 'Edit Document' : 'Add Company Document'} size="lg">
+        <form onSubmit={handleDocSave} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Input label="Document Name" value={docForm.name} onChange={setDoc('name')} required
+                placeholder="e.g. SARS Tax Registration Certificate" />
+            </div>
+            <Select label="Category" value={docForm.category} onChange={handleCategoryChange}>
+              <option value="compliance">Compliance</option>
+              <option value="banking">Banking</option>
+              <option value="tax">Tax</option>
+            </Select>
+            <Select label="Status" value={docForm.status} onChange={setDoc('status')}>
+              <option value="available">Available</option>
+              <option value="pending">Pending</option>
+              <option value="missing">Missing</option>
+            </Select>
+            <Input label="Reference" value={docForm.ref} onChange={setDoc('ref')} placeholder="e.g. COR-2026-001" />
+            <Input label="Date" type="date" value={docForm.date} onChange={setDoc('date')} />
+            <div className="col-span-2">
+              <FileUploadZone
+                label={editDoc && docForm.file_path ? 'Replace File' : 'Attach File'}
+                currentPath={docForm.file_path}
+                onUploaded={(path) => setDocForm(p => ({ ...p, file_path: path }))}
+              />
+            </div>
+            <div className="col-span-2">
+              <Textarea label="Notes" value={docForm.notes || ''} onChange={setDoc('notes')} rows={2} placeholder="Any notes…" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setDocModalOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={docSaving}>{editDoc ? 'Save Changes' : 'Save Document'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
     </div>
   )
 }

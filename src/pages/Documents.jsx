@@ -66,16 +66,14 @@ const TYPE_COLORS = {
   partnership: 'text-valo-accent',
   review: 'text-valo-blue',
   sla: 'text-valo-amber',
-  compliance: 'text-valo-blue',
-  banking: 'text-valo-green',
-  tax: 'text-valo-amber',
   other: 'text-valo-subtle',
 }
 
 const CAT_PREFIX = {
-  agreement: 'AGR', partnership: 'PART', sla: 'SLA', review: 'REV',
-  compliance: 'COR', banking: 'BNK', tax: 'TAX', other: 'DOC',
+  agreement: 'AGR', partnership: 'PART', sla: 'SLA', review: 'REV', other: 'DOC',
 }
+
+const COMMERCIAL_CATS = ['agreement', 'partnership', 'sla', 'review', 'other']
 
 function deriveRef(category, existingDocs) {
   const year = new Date().getFullYear()
@@ -179,9 +177,10 @@ export default function Documents() {
       .catch(() => {})
   }, [])
 
-  const types = ['all', ...new Set(data.map(d => d.category).filter(Boolean))]
+  const commercialData = data.filter(d => COMMERCIAL_CATS.includes(d.category))
+  const types = ['all', ...new Set(commercialData.map(d => d.category).filter(Boolean))]
 
-  const filtered = data.filter(d => {
+  const filtered = commercialData.filter(d => {
     const matchSearch = (d.name || '').toLowerCase().includes(search.toLowerCase()) ||
       (d.client_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (d.ref || '').toLowerCase().includes(search.toLowerCase())
@@ -224,7 +223,7 @@ export default function Documents() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-valo-text text-2xl font-semibold">Commercial Docs</h1>
-          <p className="text-valo-subtle text-sm mt-1">{data.length} document{data.length !== 1 ? 's' : ''} — agreements, compliance &amp; contracts</p>
+          <p className="text-valo-subtle text-sm mt-1">{filtered.length} document{filtered.length !== 1 ? 's' : ''} — agreements, SLAs &amp; client contracts</p>
         </div>
         <Button onClick={openNew}><Plus size={15} /> Add Document</Button>
       </div>
@@ -325,9 +324,6 @@ export default function Documents() {
               <option value="partnership">Partnership</option>
               <option value="sla">SLA</option>
               <option value="review">Review</option>
-              <option value="compliance">Compliance</option>
-              <option value="banking">Banking</option>
-              <option value="tax">Tax</option>
               <option value="other">Other</option>
             </Select>
             <Select label="Status" value={form.status} onChange={set('status')}>
