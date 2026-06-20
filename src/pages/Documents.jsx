@@ -4,8 +4,62 @@ import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { Input, Select, Textarea } from '../components/ui/Input'
-import { FileText, ExternalLink, Search, Plus, Folder, Upload, RefreshCw, X } from 'lucide-react'
+import { FileText, ExternalLink, Search, Plus, Folder, Upload, RefreshCw, X, Eye, Download } from 'lucide-react'
 import { format } from 'date-fns'
+
+function PreviewModal({ doc, onClose }) {
+  if (!doc) return null
+  const isPdf = doc.file_path?.toLowerCase().endsWith('.pdf')
+  const isImage = /\.(png|jpe?g|webp|gif)$/i.test(doc.file_path || '')
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-valo-dark border-b border-valo-border shrink-0">
+        <div className="flex-1 min-w-0 mr-4">
+          <div className="text-valo-text font-semibold text-sm truncate">{doc.name}</div>
+          {doc.ref && <div className="text-valo-muted text-xs font-mono">{doc.ref}</div>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={doc.file_path}
+            download
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-valo-accent text-valo-black text-xs font-semibold rounded-lg hover:bg-valo-accent-dim transition-colors"
+          >
+            <Download size={13} /> Download
+          </a>
+          <button onClick={onClose}
+            className="p-1.5 text-valo-subtle hover:text-valo-text rounded-lg hover:bg-valo-card transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
+        {isPdf ? (
+          <iframe
+            src={`${doc.file_path}#toolbar=1&navpanes=0`}
+            className="w-full h-full rounded-lg border border-valo-border bg-white"
+            title={doc.name}
+          />
+        ) : isImage ? (
+          <img src={doc.file_path} alt={doc.name}
+            className="max-w-full max-h-full object-contain rounded-lg" />
+        ) : (
+          <div className="text-center text-valo-subtle space-y-4">
+            <FileText size={48} className="mx-auto opacity-30" />
+            <p className="text-sm">Preview not available for this file type.</p>
+            <a href={doc.file_path} download
+              className="inline-flex items-center gap-2 px-4 py-2 bg-valo-accent text-valo-black text-sm font-semibold rounded-lg hover:bg-valo-accent-dim transition-colors">
+              <Download size={15} /> Download to view
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const TYPE_COLORS = {
   agreement: 'text-valo-green',
@@ -114,6 +168,7 @@ export default function Documents() {
   const [editDoc, setEditDoc] = useState(null)
   const [form, setForm] = useState(EMPTY_DOC)
   const [saving, setSaving] = useState(false)
+  const [previewDoc, setPreviewDoc] = useState(null)
 
   useEffect(() => {
     docsApi.list()
@@ -214,21 +269,30 @@ export default function Documents() {
               </div>
               <Badge status={doc.status || 'pending'} />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-auto pt-1">
               <div className="flex items-center gap-2">
                 {doc.category && <span className="text-valo-muted text-xs capitalize bg-valo-border/40 px-2 py-0.5 rounded">{doc.category}</span>}
                 {doc.date && <span className="text-valo-muted text-xs">{format(new Date(doc.date), 'd MMM yyyy')}</span>}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => openEdit(doc)}
-                  className="flex items-center gap-1 text-valo-subtle hover:text-valo-accent text-xs transition-colors">
+                  title="Replace file or edit details"
+                  className="flex items-center gap-1 text-valo-subtle hover:text-valo-text text-xs transition-colors">
                   <RefreshCw size={11} /> Replace
                 </button>
                 {doc.file_path && (
-                  <a href={doc.file_path} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-valo-accent text-xs hover:underline">
-                    Open <ExternalLink size={11} />
-                  </a>
+                  <>
+                    <a href={doc.file_path} download
+                      title="Download"
+                      className="flex items-center gap-1 text-valo-subtle hover:text-valo-text text-xs transition-colors">
+                      <Download size={11} /> Download
+                    </a>
+                    <button onClick={() => setPreviewDoc(doc)}
+                      title="Preview"
+                      className="flex items-center gap-1 text-valo-accent hover:text-valo-accent/80 text-xs font-medium transition-colors">
+                      <Eye size={11} /> Preview
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -242,6 +306,9 @@ export default function Documents() {
           </div>
         )}
       </div>
+
+      {/* PDF / image preview */}
+      {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
 
       {/* Add / Edit modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)}

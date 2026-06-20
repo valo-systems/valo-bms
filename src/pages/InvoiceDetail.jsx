@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { invoices as invoicesApi, clients as clientsApi } from '../api/endpoints'
+import logoOnLight from '../assets/logo-on-light.png'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
@@ -351,8 +352,7 @@ function InvoiceDocument({ invoice }) {
       {/* Header */}
       <div className="flex items-start justify-between px-6 sm:px-10 py-8 border-b border-gray-200">
         <div>
-          <div className="text-2xl font-bold tracking-tight text-gray-900">VALO</div>
-          <div className="text-xs text-gray-500 mt-0.5">Trading as Valo Systems</div>
+          <img src={logoOnLight} alt="Valo Systems" className="h-10 w-auto" />
         </div>
         <div className="text-right">
           <div className="text-xl font-bold text-gray-900 mb-2">Tax Invoice</div>
