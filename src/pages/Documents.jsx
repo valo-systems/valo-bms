@@ -1,28 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { documents as docsApi, clients as clientsApi } from '../api/endpoints'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { Input, Select, Textarea } from '../components/ui/Input'
-import { FileText, ExternalLink, Search, Plus, Folder } from 'lucide-react'
+import { FileText, ExternalLink, Search, Plus, Folder, Upload, RefreshCw, X } from 'lucide-react'
 import { format } from 'date-fns'
-
-const PLACEHOLDER = [
-  { id: 1, name: 'CGS Technology Platform Agreement', category: 'agreement', client_name: 'Convenient Gas Solutions', date: '2026-03-24', status: 'available', file_path: '/commercial/technology-platform-agreement.html' },
-  { id: 2, name: 'Kasi to Home Website Services Agreement', category: 'agreement', client_name: 'Kasi to Home', date: '2026-03-24', status: 'available', file_path: '/commercial/kasi-to-home-website-agreement.html' },
-  { id: 3, name: 'Valo-OmniSolve Partnership Agreement', category: 'partnership', client_name: 'OmniSolve', date: '2026-01-01', status: 'available', file_path: '/commercial/valo-omnisolve-partnership-agreement.html' },
-  { id: 4, name: 'OmniSolve-TWL SLA Review', category: 'review', client_name: 'OmniSolve', date: '2026-04-01', status: 'available', file_path: '/commercial/twl-sla-review.html' },
-]
 
 const TYPE_COLORS = {
   agreement: 'text-valo-green',
   partnership: 'text-valo-accent',
   review: 'text-valo-blue',
   sla: 'text-valo-amber',
+  compliance: 'text-valo-blue',
+  banking: 'text-valo-green',
+  tax: 'text-valo-amber',
   other: 'text-valo-subtle',
 }
 
-const CAT_PREFIX = { agreement: 'AGR', partnership: 'PART', sla: 'SLA', review: 'REV', other: 'DOC' }
+const CAT_PREFIX = {
+  agreement: 'AGR', partnership: 'PART', sla: 'SLA', review: 'REV',
+  compliance: 'COR', banking: 'BNK', tax: 'TAX', other: 'DOC',
+}
 
 function deriveRef(category, existingDocs) {
   const year = new Date().getFullYear()
@@ -41,19 +40,85 @@ const EMPTY_DOC = {
   name: '', category: '', ref: '', client_id: '', file_path: '', status: 'pending', notes: '', date: today
 }
 
+function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
+  const ref = useRef()
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [fileName, setFileName] = useState(currentPath ? currentPath.split('/').pop() : '')
+  const [error, setError] = useState('')
+
+  const handleFile = async (file) => {
+    if (!file) return
+    setUploading(true)
+    setError('')
+    setProgress(0)
+    try {
+      const res = await docsApi.upload(file, (e) => {
+        if (e.total) setProgress(Math.round((e.loaded / e.total) * 100))
+      })
+      setFileName(file.name)
+      onUploaded(res.file_path)
+    } catch {
+      setError('Upload failed — check file type (PDF, image, Word) and size (max 20MB)')
+    } finally {
+      setUploading(false)
+      setProgress(0)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-valo-subtle text-xs font-medium uppercase tracking-wide mb-1.5">{label}</label>
+      <div
+        onClick={() => ref.current?.click()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+        className="border border-dashed border-valo-border rounded-lg px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-valo-accent/50 transition-colors bg-valo-black"
+      >
+        <Upload size={15} className="text-valo-subtle shrink-0" />
+        <div className="flex-1 min-w-0">
+          {uploading ? (
+            <div className="space-y-1">
+              <div className="text-valo-subtle text-xs">Uploading… {progress}%</div>
+              <div className="h-1 bg-valo-border rounded-full overflow-hidden">
+                <div className="h-full bg-valo-accent transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          ) : fileName ? (
+            <span className="text-valo-text text-xs truncate block">{fileName}</span>
+          ) : (
+            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word — max 20MB)</span>
+          )}
+        </div>
+        {fileName && !uploading && (
+          <button type="button" onClick={e => { e.stopPropagation(); setFileName(''); onUploaded('') }}
+            className="text-valo-muted hover:text-valo-red transition-colors shrink-0">
+            <X size={13} />
+          </button>
+        )}
+      </div>
+      {error && <p className="text-valo-red text-xs mt-1">{error}</p>}
+      <input ref={ref} type="file" className="hidden"
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+        onChange={e => handleFile(e.target.files[0])} />
+    </div>
+  )
+}
+
 export default function Documents() {
   const [data, setData] = useState([])
   const [clientList, setClientList] = useState([])
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editDoc, setEditDoc] = useState(null)
   const [form, setForm] = useState(EMPTY_DOC)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     docsApi.list()
       .then(res => setData(res.documents || res))
-      .catch(() => setData(PLACEHOLDER))
+      .catch(() => setData([]))
     clientsApi.list()
       .then(res => setClientList(res.clients || res))
       .catch(() => {})
@@ -63,27 +128,34 @@ export default function Documents() {
 
   const filtered = data.filter(d => {
     const matchSearch = (d.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (d.client_name || '').toLowerCase().includes(search.toLowerCase())
+      (d.client_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.ref || '').toLowerCase().includes(search.toLowerCase())
     const matchType = typeFilter === 'all' || d.category === typeFilter
     return matchSearch && matchType
   })
 
-  const openNew = () => { setForm(EMPTY_DOC); setModalOpen(true) }
+  const openNew = () => { setEditDoc(null); setForm(EMPTY_DOC); setModalOpen(true) }
+  const openEdit = (doc) => { setEditDoc(doc); setForm({ ...doc, client_id: doc.client_id || '' }); setModalOpen(true) }
 
   const handleCategoryChange = (e) => {
     const category = e.target.value
-    setForm(p => ({ ...p, category, ref: category ? deriveRef(category, data) : '' }))
+    setForm(p => ({ ...p, category, ref: category && !editDoc ? deriveRef(category, data) : p.ref }))
   }
 
   const handleSave = async (e) => {
     e.preventDefault()
     setSaving(true)
     try {
-      const res = await docsApi.create(form)
-      setData(prev => [...prev, { ...form, ...(res.document || res) }])
+      if (editDoc) {
+        const res = await docsApi.update(editDoc.id, form)
+        setData(prev => prev.map(d => d.id === editDoc.id ? { ...d, ...(res.document || res) } : d))
+      } else {
+        const res = await docsApi.create(form)
+        setData(prev => [...prev, { ...form, ...(res.document || res) }])
+      }
       setModalOpen(false)
     } catch {
-      setData(prev => [...prev, { ...form, id: Date.now() }])
+      if (!editDoc) setData(prev => [...prev, { ...form, id: Date.now() }])
       setModalOpen(false)
     } finally {
       setSaving(false)
@@ -97,7 +169,7 @@ export default function Documents() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-valo-text text-2xl font-semibold">Commercial Docs</h1>
-          <p className="text-valo-subtle text-sm mt-1">Agreements, SLAs &amp; commercial contracts</p>
+          <p className="text-valo-subtle text-sm mt-1">{data.length} document{data.length !== 1 ? 's' : ''} — agreements, compliance &amp; contracts</p>
         </div>
         <Button onClick={openNew}><Plus size={15} /> Add Document</Button>
       </div>
@@ -115,15 +187,12 @@ export default function Documents() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {types.map(t => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
+            <button key={t} onClick={() => setTypeFilter(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
                 typeFilter === t
                   ? 'bg-valo-accent text-valo-black'
                   : 'bg-valo-card border border-valo-border text-valo-subtle hover:text-valo-text'
-              }`}
-            >
+              }`}>
               {t}
             </button>
           ))}
@@ -140,6 +209,7 @@ export default function Documents() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-valo-text font-semibold text-sm leading-snug">{doc.name}</div>
+                {doc.ref && <div className="text-valo-muted text-xs font-mono mt-0.5">{doc.ref}</div>}
                 {doc.client_name && <div className="text-valo-subtle text-xs mt-0.5">{doc.client_name}</div>}
               </div>
               <Badge status={doc.status || 'pending'} />
@@ -149,16 +219,18 @@ export default function Documents() {
                 {doc.category && <span className="text-valo-muted text-xs capitalize bg-valo-border/40 px-2 py-0.5 rounded">{doc.category}</span>}
                 {doc.date && <span className="text-valo-muted text-xs">{format(new Date(doc.date), 'd MMM yyyy')}</span>}
               </div>
-              {doc.file_path && (
-                <a
-                  href={doc.file_path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-valo-accent text-xs hover:underline"
-                >
-                  Open <ExternalLink size={11} />
-                </a>
-              )}
+              <div className="flex items-center gap-2">
+                <button onClick={() => openEdit(doc)}
+                  className="flex items-center gap-1 text-valo-subtle hover:text-valo-accent text-xs transition-colors">
+                  <RefreshCw size={11} /> Replace
+                </button>
+                {doc.file_path && (
+                  <a href={doc.file_path} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-valo-accent text-xs hover:underline">
+                    Open <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -171,12 +243,14 @@ export default function Documents() {
         )}
       </div>
 
-      {/* New document modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Document" size="lg">
+      {/* Add / Edit modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)}
+        title={editDoc ? 'Edit Document' : 'Add Document'} size="lg">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Input label="Document Name" value={form.name} onChange={set('name')} required placeholder="e.g. CGS Technology Platform Agreement" />
+              <Input label="Document Name" value={form.name} onChange={set('name')} required
+                placeholder="e.g. Valo CIPC Registration Certificate" />
             </div>
             <Select label="Category" value={form.category} onChange={handleCategoryChange}>
               <option value="">— select —</option>
@@ -184,6 +258,9 @@ export default function Documents() {
               <option value="partnership">Partnership</option>
               <option value="sla">SLA</option>
               <option value="review">Review</option>
+              <option value="compliance">Compliance</option>
+              <option value="banking">Banking</option>
+              <option value="tax">Tax</option>
               <option value="other">Other</option>
             </Select>
             <Select label="Status" value={form.status} onChange={set('status')}>
@@ -192,23 +269,27 @@ export default function Documents() {
               <option value="missing">Missing</option>
             </Select>
             <Select label="Client" value={form.client_id} onChange={set('client_id')}>
-              <option value="">— none —</option>
+              <option value="">— Valo Systems (internal) —</option>
               {clientList.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </Select>
-            <Input label="Reference" value={form.ref} onChange={set('ref')} placeholder="e.g. AGR-2026-001" />
+            <Input label="Reference" value={form.ref} onChange={set('ref')} placeholder="e.g. COR-2026-001" />
             <div className="col-span-2">
-              <Input label="File Path / URL" value={form.file_path} onChange={set('file_path')} placeholder="/commercial/doc.html or https://…" />
+              <FileUploadZone
+                label={editDoc && form.file_path ? 'Replace File' : 'Attach File'}
+                currentPath={form.file_path}
+                onUploaded={(path) => setForm(p => ({ ...p, file_path: path }))}
+              />
             </div>
             <Input label="Date" type="date" value={form.date} onChange={set('date')} />
             <div className="col-span-2">
-              <Textarea label="Notes" value={form.notes} onChange={set('notes')} rows={3} placeholder="Any notes…" />
+              <Textarea label="Notes" value={form.notes} onChange={set('notes')} rows={2} placeholder="Any notes…" />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save Document</Button>
+            <Button type="submit" loading={saving}>{editDoc ? 'Save Changes' : 'Save Document'}</Button>
           </div>
         </form>
       </Modal>

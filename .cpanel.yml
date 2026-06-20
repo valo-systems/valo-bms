@@ -2,15 +2,20 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/valosyst/public_html/bms.valosystems.co.za
-    # Clear everything except .htaccess (preserve manual server edits)
+    # Clear everything except .htaccess, config.local.php, and uploads/
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 -not -name '.htaccess' -not -name 'config.local.php' -exec /bin/rm -rf {} +
+    - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 -not -name '.htaccess' -not -name 'config.local.php' -not -name 'uploads' -exec /bin/rm -rf {} +
     # Deploy SPA
     - /bin/cp -R dist/. $DEPLOYPATH
     - /bin/cp .htaccess $DEPLOYPATH/.htaccess
     # Deploy API into /api subdirectory
     - /bin/mkdir -p $DEPLOYPATH/api
     - /bin/cp -R api/. $DEPLOYPATH/api
+    # Seed initial CICP uploads (only copies if destination does not exist)
+    - /bin/mkdir -p $DEPLOYPATH/uploads/documents/cicp
+    - /bin/cp -n public/uploads/documents/cicp/. $DEPLOYPATH/uploads/documents/cicp/ 2>/dev/null || true
     # Set permissions
     - /bin/find $DEPLOYPATH -type d -exec /bin/chmod 755 {} +
     - /bin/find $DEPLOYPATH -type f -exec /bin/chmod 644 {} +
+    # uploads/ must be writable by PHP
+    - /bin/chmod -R 775 $DEPLOYPATH/uploads

@@ -33,6 +33,15 @@ export const documents = {
   list: () => api.get('/documents/index.php'),
   get: (id) => api.get(`/documents/show.php?id=${id}`),
   create: (data) => api.post('/documents/create.php', data),
+  update: (id, data) => api.put(`/documents/update.php?id=${id}`, data),
+  upload: (file, onProgress) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/documents/upload.php', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress,
+    })
+  },
 }
 
 export const company = {
