@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { auth } from '../api/endpoints'
 import Button from '../components/ui/Button'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
+import logoOnDark from '../assets/logo-on-dark.png'
 
 export default function Login() {
   const [email, setEmail]       = useState('')
@@ -60,10 +61,7 @@ export default function Login() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-14 h-14 bg-valo-accent rounded-xl items-center justify-center mb-4">
-            <span className="text-valo-black font-bold text-2xl">V</span>
-          </div>
-          <h1 className="text-valo-text text-xl font-semibold">Valo BMS</h1>
+          <img src={logoOnDark} alt="Valo BMS" className="h-10 w-auto mx-auto mb-4" />
           <p className="text-valo-subtle text-sm mt-1">Business Management System</p>
         </div>
 

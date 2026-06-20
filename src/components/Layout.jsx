@@ -5,6 +5,8 @@ import {
   LayoutDashboard, Users, FileText, Receipt, TrendingUp,
   Building2, LogOut, Menu, X, ChevronRight, UserCog,
 } from 'lucide-react'
+import logoOnDark from '../assets/logo-on-dark.png'
+import logoSymbol from '../assets/logo-symbol.svg'
 
 const nav = [
   { to: '/',          icon: LayoutDashboard, label: 'Dashboard',       short: 'Home'     },
@@ -48,13 +50,7 @@ export default function Layout({ children }) {
       `}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-valo-border shrink-0">
-          <div className="w-8 h-8 bg-valo-accent rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-valo-black font-bold text-sm">V</span>
-          </div>
-          <div>
-            <div className="text-valo-text font-semibold text-sm tracking-wide">VALO BMS</div>
-            <div className="text-valo-muted text-xs">Business Management</div>
-          </div>
+          <img src={logoOnDark} alt="Valo BMS" className="h-7 w-auto" />
           {/* Close button mobile only */}
           <button onClick={() => setDrawerOpen(false)} className="ml-auto p-1 text-valo-subtle lg:hidden">
             <X size={18} />
@@ -106,7 +102,8 @@ export default function Layout({ children }) {
             <Menu size={20} />
           </button>
 
-          {/* Mobile: current page title */}
+          {/* Mobile: logo + page title */}
+          <img src={logoSymbol} alt="" className="lg:hidden h-6 w-6 shrink-0" />
           <span className="lg:hidden text-valo-text text-sm font-medium truncate flex-1">
             {nav.find(n => isActive(n.to))?.label || 'VALO BMS'}
           </span>
