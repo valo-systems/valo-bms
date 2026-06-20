@@ -1,0 +1,8 @@
+<?php
+// Copy this file to config.local.php on the server and fill in the values.
+// config.local.php is in .gitignore — never commit it.
+define('_DB_HOST',    'localhost');
+define('_DB_NAME',    'valosyst_bms');
+define('_DB_USER',    'valosyst_bms_admin');
+define('_DB_PASS',    'your-db-password-here');
+define('_JWT_SECRET', 'replace-with-a-long-random-string');

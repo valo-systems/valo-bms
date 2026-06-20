@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  /* Use dvh so mobile browsers account for the address bar */
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent iOS tap highlight */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent font inflation on mobile */
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+}
+
+#root {
+  min-height: 100%;
+}
+
+/* ── Mobile safe area (notch / home indicator) ───────────────────────────── */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #111111; }
+::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+
+/* Hide scrollbar for tab bars while keeping scroll functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ── Focus ring — accessible but unobtrusive ─────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Typography scale ────────────────────────────────────────────────────── */
+/* Ensures Inter numeric figures are tabular for financial tables */
+.font-mono, td, th { font-variant-numeric: tabular-nums; }
+
+/* ── Touch targets — minimum 44px for all interactive elements ───────────── */
+button, a, [role="button"] {
+  min-height: 0; /* Let explicit sizing win — just ensures no shrinking below content */
+}
+
+/* ── Print: hide chrome, show only invoice document ─────────────────────── */
+@media print {
+  .no-print, nav, aside, header { display: none !important; }
+  body { background: white !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+}

@@ -1,0 +1,16 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/valosyst/public_html/bms.valosystems.co.za
+    # Clear everything except .htaccess (preserve manual server edits)
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/find $DEPLOYPATH -mindepth 1 -maxdepth 1 -not -name '.htaccess' -not -name 'config.local.php' -exec /bin/rm -rf {} +
+    # Deploy SPA
+    - /bin/cp -R dist/. $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH/.htaccess
+    # Deploy API into /api subdirectory
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/cp -R api/. $DEPLOYPATH/api
+    # Set permissions
+    - /bin/find $DEPLOYPATH -type d -exec /bin/chmod 755 {} +
+    - /bin/find $DEPLOYPATH -type f -exec /bin/chmod 644 {} +

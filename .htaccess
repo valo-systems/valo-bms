@@ -1,0 +1,18 @@
+Options -MultiViews
+RewriteEngine On
+
+# Redirect HTTP to HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect www to non-www
+RewriteCond %{HTTP_HOST} ^www\.bms\.valosystems\.co\.za [NC]
+RewriteRule ^ https://bms.valosystems.co.za%{REQUEST_URI} [L,R=301]
+
+# Let the PHP API handle its own requests
+RewriteRule ^api/ - [L]
+
+# SPA fallback — all other non-file/non-directory requests → index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]
