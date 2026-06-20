@@ -350,7 +350,7 @@ function InvoiceDocument({ invoice }) {
     <div id="invoice-print" className="bg-white text-gray-900 rounded-xl overflow-hidden shadow-2xl">
 
       {/* Header */}
-      <div className="flex items-start justify-between px-6 sm:px-10 py-8 border-b border-gray-200">
+      <div className="flex flex-wrap items-start justify-between gap-4 px-6 sm:px-10 py-8 border-b border-gray-200">
         <div>
           <img src={logoInvoice} alt="Valo Systems" className="h-20 w-auto" />
         </div>
@@ -421,6 +421,7 @@ function InvoiceDocument({ invoice }) {
               </div>
             </div>
           )}
+          <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-gray-200">
@@ -455,6 +456,7 @@ function InvoiceDocument({ invoice }) {
               })}
             </tbody>
           </table>
+          </div>
           {sec.label && (
             <div className="flex justify-end mt-3">
               <div className="bg-gray-100 rounded px-4 py-2 text-xs">
