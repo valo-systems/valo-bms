@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { clients as clientsApi, invoices as invoicesApi } from '../api/endpoints'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
-import Modal from '../components/ui/Modal'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { ListTable, ListRow } from '../components/ui/Table'
-import { ArrowLeft, Mail, Phone, MapPin, Edit, Receipt, Building2, CreditCard, Info, Save, X } from 'lucide-react'
+import { ArrowLeft, Mail, Edit, Receipt, Building2, CreditCard, Info, Save, X } from 'lucide-react'
 import { format } from 'date-fns'
+import PaymentPlansSection from '../components/PaymentPlansSection'
 
-const fmt = (n) => n != null ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2 }).format(parseFloat(n)) : '-'
+const fmt = (n) => n != null
+  ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2 }).format(parseFloat(n))
+  : '-'
 
 function Field({ label, value }) {
   if (!value) return null
@@ -23,11 +25,11 @@ function Field({ label, value }) {
 
 export default function ClientDetail() {
   const { id } = useParams()
-  const [client, setClient] = useState(null)
+  const [client, setClient]               = useState(null)
   const [clientInvoices, setClientInvoices] = useState([])
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(null)
-  const [saving, setSaving] = useState(false)
+  const [editing, setEditing]             = useState(false)
+  const [form, setForm]                   = useState(null)
+  const [saving, setSaving]               = useState(false)
 
   useEffect(() => {
     clientsApi.get(id)
@@ -84,7 +86,6 @@ export default function ClientDetail() {
       </div>
 
       {editing ? (
-        /* ── EDIT FORM ── */
         <div className="space-y-6">
           <div className="bg-valo-card border border-valo-border rounded-xl p-6">
             <h2 className="text-valo-text font-semibold text-sm mb-4">Company Details</h2>
@@ -148,10 +149,8 @@ export default function ClientDetail() {
           </div>
         </div>
       ) : (
-        /* ── VIEW MODE ── */
         <div className="space-y-6">
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Contact */}
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4"><Mail size={14} className="text-valo-accent" /><h2 className="text-valo-text font-semibold text-sm">Contact</h2></div>
               <div className="space-y-3">
@@ -164,7 +163,6 @@ export default function ClientDetail() {
               </div>
             </div>
 
-            {/* Billing */}
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4"><CreditCard size={14} className="text-valo-accent" /><h2 className="text-valo-text font-semibold text-sm">Billing Terms</h2></div>
               <div className="space-y-3">
@@ -178,7 +176,6 @@ export default function ClientDetail() {
               </div>
             </div>
 
-            {/* Revenue summary */}
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4"><Receipt size={14} className="text-valo-accent" /><h2 className="text-valo-text font-semibold text-sm">Revenue</h2></div>
               <div className="space-y-3">
@@ -193,7 +190,6 @@ export default function ClientDetail() {
             </div>
           </div>
 
-          {/* Infrastructure */}
           {(client.fx_policy || client.sms_rate || client.domain) && (
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4"><Building2 size={14} className="text-valo-accent" /><h2 className="text-valo-text font-semibold text-sm">Infrastructure</h2></div>
@@ -207,7 +203,6 @@ export default function ClientDetail() {
             </div>
           )}
 
-          {/* Agreement */}
           {(client.agreement_ref || client.agreement_notes) && (
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4"><Info size={14} className="text-valo-accent" /><h2 className="text-valo-text font-semibold text-sm">Agreement</h2></div>
@@ -223,7 +218,6 @@ export default function ClientDetail() {
             </div>
           )}
 
-          {/* Internal notes */}
           {client.notes && (
             <div className="bg-valo-card border border-valo-border rounded-xl p-5">
               <h2 className="text-valo-text font-semibold text-sm mb-2">Internal Notes</h2>
@@ -231,7 +225,12 @@ export default function ClientDetail() {
             </div>
           )}
 
-          {/* Invoices */}
+          <PaymentPlansSection
+            clientId={id}
+            invoiceList={clientInvoices}
+            client={client}
+          />
+
           <div className="bg-valo-card border border-valo-border rounded-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-valo-border">
               <h2 className="text-valo-text font-semibold text-sm">Invoices</h2>

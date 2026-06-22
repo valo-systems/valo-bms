@@ -77,9 +77,32 @@ try {
 
     $pdo->commit();
 
-    $stmt2 = $pdo->prepare('SELECT i.*, c.name as client_name FROM invoices i LEFT JOIN clients c ON i.client_id = c.id WHERE i.id = ?');
+    $stmt2 = $pdo->prepare('
+        SELECT i.*,
+               c.name    AS client_name,
+               c.email   AS client_email,
+               c.phone   AS client_phone,
+               c.address AS client_address
+        FROM invoices i
+        LEFT JOIN clients c ON i.client_id = c.id
+        WHERE i.id = ? LIMIT 1
+    ');
     $stmt2->execute([$id]);
-    ok(['invoice' => $stmt2->fetch()]);
+    $invoice = $stmt2->fetch();
+
+    $stmt3 = $pdo->prepare('
+        SELECT id, invoice_id, sort_order,
+               section_label, section_description, description, item_note, calculation_detail,
+               usd_amount, quantity, unit_price, total,
+               is_discount, is_section_header, is_estimated, template_id
+        FROM invoice_line_items
+        WHERE invoice_id = ?
+        ORDER BY sort_order ASC
+    ');
+    $stmt3->execute([$id]);
+    $invoice['line_items'] = $stmt3->fetchAll();
+
+    ok(['invoice' => $invoice]);
 } catch (Exception $e) {
     $pdo->rollBack();
     fail('Failed to update invoice: ' . $e->getMessage(), 500);

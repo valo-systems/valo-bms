@@ -53,6 +53,13 @@ export const dashboard = {
   summary: () => api.get('/dashboard/summary.php'),
 }
 
+export const paymentPlans = {
+  list: (params = {}) => api.get('/payment-plans/index.php', { params }),
+  create: (data) => api.post('/payment-plans/create.php', data),
+  update: (id, data) => api.put(`/payment-plans/update.php?id=${id}`, data),
+  delete: (id) => api.delete(`/payment-plans/delete.php?id=${id}`),
+}
+
 export const team = {
   list:   ()       => api.get('/users/index.php'),
   get:    (id)     => api.get(`/users/show.php?id=${id}`),

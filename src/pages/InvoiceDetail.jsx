@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { invoices as invoicesApi, clients as clientsApi } from '../api/endpoints'
+import PaymentPlansSection from '../components/PaymentPlansSection'
 import logoInvoice from '../assets/logo-invoice.png'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -636,6 +637,15 @@ export default function InvoiceDetail() {
         />
       ) : (
         <InvoiceDocument invoice={invoice} />
+      )}
+
+      {!editing && invoice.client_id && (
+        <PaymentPlansSection
+          clientId={String(invoice.client_id)}
+          invoiceId={String(invoice.id)}
+          invoiceList={[invoice]}
+          client={{ name: invoice.client_name, accounts_email: invoice.client_email }}
+        />
       )}
 
       <style>{`
