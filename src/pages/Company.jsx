@@ -95,7 +95,7 @@ function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
       setFileName(file.name)
       onUploaded(res.file_path)
     } catch {
-      setError('Upload failed — check file type (PDF, image, Word) and size (max 20MB)')
+      setError('Upload failed - check file type (PDF, image, Word) and size (max 20MB)')
     } finally { setUploading(false); setProgress(0) }
   }
 
@@ -117,7 +117,7 @@ function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
           ) : fileName ? (
             <span className="text-valo-text text-xs truncate block">{fileName}</span>
           ) : (
-            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word — max 20MB)</span>
+            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word - max 20MB)</span>
           )}
         </div>
         {fileName && !uploading && (
@@ -265,7 +265,7 @@ export default function Company() {
         )}
       </div>
 
-      {/* Tabs — scrollable on mobile */}
+      {/* Tabs - scrollable on mobile */}
       <div className="flex gap-0 border-b border-valo-border overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0">
         {TABS.map(tab => (
           <button

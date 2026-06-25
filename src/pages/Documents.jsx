@@ -111,7 +111,7 @@ function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
       setFileName(file.name)
       onUploaded(res.file_path)
     } catch {
-      setError('Upload failed — check file type (PDF, image, Word) and size (max 20MB)')
+      setError('Upload failed - check file type (PDF, image, Word) and size (max 20MB)')
     } finally {
       setUploading(false)
       setProgress(0)
@@ -139,7 +139,7 @@ function FileUploadZone({ onUploaded, currentPath, label = 'Attach File' }) {
           ) : fileName ? (
             <span className="text-valo-text text-xs truncate block">{fileName}</span>
           ) : (
-            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word — max 20MB)</span>
+            <span className="text-valo-muted text-xs">Click or drag a file here (PDF, image, Word - max 20MB)</span>
           )}
         </div>
         {fileName && !uploading && (
@@ -223,7 +223,7 @@ export default function Documents() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-valo-text text-2xl font-semibold">Commercial Docs</h1>
-          <p className="text-valo-subtle text-sm mt-1">{filtered.length} document{filtered.length !== 1 ? 's' : ''} — agreements, SLAs &amp; client contracts</p>
+          <p className="text-valo-subtle text-sm mt-1">{filtered.length} document{filtered.length !== 1 ? 's' : ''} - agreements, SLAs &amp; client contracts</p>
         </div>
         <Button onClick={openNew}><Plus size={15} /> Add Document</Button>
       </div>
@@ -319,7 +319,7 @@ export default function Documents() {
                 placeholder="e.g. Valo CIPC Registration Certificate" />
             </div>
             <Select label="Category" value={form.category} onChange={handleCategoryChange}>
-              <option value="">— select —</option>
+              <option value="">- select -</option>
               <option value="agreement">Agreement</option>
               <option value="partnership">Partnership</option>
               <option value="sla">SLA</option>
@@ -332,7 +332,7 @@ export default function Documents() {
               <option value="missing">Missing</option>
             </Select>
             <Select label="Client" value={form.client_id} onChange={set('client_id')}>
-              <option value="">— Valo Systems (internal) —</option>
+              <option value="">- Valo Systems (internal) -</option>
               {clientList.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

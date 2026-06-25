@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Users, FileText, Receipt, TrendingUp,
-  Building2, LogOut, Menu, X, ChevronRight, UserCog,
+  Building2, LogOut, Menu, X, ChevronRight, UserCog, Inbox, MailOpen,
 } from 'lucide-react'
 import logoOnDark from '../assets/logo-on-dark.png'
 import logoSymbol from '../assets/logo-symbol.svg'
@@ -14,8 +14,10 @@ const nav = [
   { to: '/invoices',  icon: Receipt,         label: 'Invoices',        short: 'Invoices' },
   { to: '/expenses',  icon: TrendingUp,      label: 'Financials',      short: 'Finance'  },
   { to: '/documents', icon: FileText,        label: 'Commercial Docs', short: 'Docs'     },
-  { to: '/team',      icon: UserCog,         label: 'Team',            short: 'Team'     },
-  { to: '/company',   icon: Building2,       label: 'Company',         short: 'Company'  },
+  { to: '/inbox',           icon: Inbox,           label: 'Inbox',           short: 'Inbox'    },
+  { to: '/email-templates', icon: MailOpen,        label: 'Email Templates', short: 'Templates'},
+  { to: '/team',            icon: UserCog,         label: 'Team',            short: 'Team'     },
+  { to: '/company',         icon: Building2,       label: 'Company',         short: 'Company'  },
 ]
 
 // Mobile bottom nav shows 5 items max — most-used only

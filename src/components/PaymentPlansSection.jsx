@@ -4,8 +4,9 @@ import Badge from './ui/Badge'
 import Button from './ui/Button'
 import Modal from './ui/Modal'
 import { Textarea } from './ui/Input'
+import SendEmailModal from './SendEmailModal'
 import {
-  Plus, Trash2, Edit, Save, X, FileText, Printer,
+  Plus, Trash2, Edit, Save, X, FileText, Printer, Mail,
   CalendarClock, CheckCircle2, Clock, AlertCircle,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -78,7 +79,7 @@ export function InstalmentStatement({ plan, instalment, client }) {
         </div>
         <div className="text-2xl font-bold text-blue-900">{fmt(thisAmt)}</div>
         <div className="text-xs text-blue-700 mt-0.5">
-          Due {instalment.due_date ? format(new Date(instalment.due_date), 'd MMMM yyyy') : '—'}
+          Due {instalment.due_date ? format(new Date(instalment.due_date), 'd MMMM yyyy') : '-'}
           {instalment.notes && <span className="ml-2 text-blue-500 italic">· {instalment.notes}</span>}
         </div>
         {plan.description && <div className="text-xs text-blue-600 mt-1">{plan.description}</div>}
@@ -105,7 +106,7 @@ export function InstalmentStatement({ plan, instalment, client }) {
                     {inst.instalment_no}
                   </td>
                   <td className={`py-2.5 ${isCurrent ? 'text-blue-900 font-semibold' : 'text-gray-700'}`}>
-                    {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '—'}
+                    {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '-'}
                     {isCurrent && <span className="ml-2 text-xs text-blue-500 font-normal">← this statement</span>}
                   </td>
                   <td className={`py-2.5 text-right tabular-nums font-medium ${isCurrent ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
@@ -187,23 +188,42 @@ export function InstalmentStatement({ plan, instalment, client }) {
 
 // ── Statement modal ───────────────────────────────────────────────────────────
 export function StatementModal({ open, onClose, plan, instalment, client }) {
+  const [emailOpen, setEmailOpen] = useState(false)
   if (!plan || !instalment) return null
+
+  const handlePrint = () => {
+    const html = document.getElementById('statement-print')?.outerHTML
+    if (!html) return
+    const win = window.open('', '_blank')
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <script src="https://cdn.tailwindcss.com"><\/script>
+      <style>body{margin:0;background:white;}</style>
+      </head><body>${html}</body></html>`)
+    win.document.close()
+    win.focus()
+    // Wait for Tailwind CDN to parse then print
+    setTimeout(() => { win.print(); win.close() }, 900)
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title={`Statement — Instalment ${instalment.instalment_no} of ${plan.instalments?.length}`} size="xl">
-      <div className="max-h-[75vh] overflow-y-auto -mx-6 px-6">
-        <InstalmentStatement plan={plan} instalment={instalment} client={client} />
-      </div>
-      <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-valo-border">
-        <Button variant="secondary" onClick={onClose}><X size={14} /> Close</Button>
-        <Button onClick={() => window.print()}><Printer size={14} /> Print / Save PDF</Button>
-      </div>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          #statement-print { display: block !important; }
-        }
-      `}</style>
-    </Modal>
+    <>
+      <Modal open={open} onClose={onClose} title={`Statement - Instalment ${instalment.instalment_no} of ${plan.instalments?.length}`} size="xl">
+        <div className="max-h-[75vh] overflow-y-auto -mx-6 px-6">
+          <InstalmentStatement plan={plan} instalment={instalment} client={client} />
+        </div>
+        <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-valo-border">
+          <Button variant="secondary" onClick={onClose}><X size={14} /> Close</Button>
+          <Button variant="secondary" onClick={() => setEmailOpen(true)}><Mail size={14} /> Send Email</Button>
+          <Button onClick={handlePrint}><Printer size={14} /> Print / Save PDF</Button>
+        </div>
+      </Modal>
+
+      <SendEmailModal
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        invoice={plan.invoice_id ? { id: plan.invoice_id, client_email: client?.accounts_email, accounts_email: client?.accounts_email } : null}
+      />
+    </>
   )
 }
 
@@ -305,7 +325,7 @@ export function PlanModal({ open, onClose, plan, clientId, defaultInvoiceId, inv
             disabled={editing}
             className="w-full bg-valo-black border border-valo-border rounded-lg px-3 py-2.5 text-valo-text text-sm focus:outline-none focus:border-valo-accent/60 transition-colors disabled:opacity-60"
           >
-            <option value="">— select invoice —</option>
+            <option value="">- select invoice -</option>
             {invoiceList.map(inv => (
               <option key={inv.id} value={inv.id}>
                 {inv.number} · {fmt(inv.total)}
@@ -360,7 +380,7 @@ export function PlanModal({ open, onClose, plan, clientId, defaultInvoiceId, inv
                 <div key={i} className="flex items-center gap-2 bg-valo-black/40 rounded-lg px-3 py-2">
                   <span className="text-valo-muted text-xs font-mono w-5 shrink-0">#{inst.instalment_no}</span>
                   <span className="text-valo-subtle text-xs w-24 shrink-0">
-                    {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '—'}
+                    {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '-'}
                   </span>
                   <span className="text-valo-text text-xs font-medium tabular-nums w-20 text-right shrink-0">{fmt(inst.amount)}</span>
                   <select
@@ -498,7 +518,7 @@ export default function PaymentPlansSection({ clientId, invoiceId, invoiceList, 
                         <span className="text-valo-subtle w-5 font-mono">#{inst.instalment_no}</span>
                         <span className="text-valo-text tabular-nums font-medium w-24">{fmt(inst.amount)}</span>
                         <span className="text-valo-muted">
-                          due {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '—'}
+                          due {inst.due_date ? format(new Date(inst.due_date), 'd MMM yyyy') : '-'}
                         </span>
                         {inst.notes && <span className="text-valo-subtle italic truncate">{inst.notes}</span>}
                         <button

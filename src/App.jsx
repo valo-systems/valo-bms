@@ -13,6 +13,8 @@ import Documents from './pages/Documents'
 import Company from './pages/Company'
 import Team from './pages/Team'
 import StaffProfile from './pages/StaffProfile'
+import Inbox from './pages/Inbox'
+import EmailTemplates from './pages/EmailTemplates'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,6 +42,8 @@ function AppRoutes() {
       <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
       <Route path="/team/:id" element={<ProtectedRoute><StaffProfile /></ProtectedRoute>} />
       <Route path="/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
+      <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+      <Route path="/email-templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

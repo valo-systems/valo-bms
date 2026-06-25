@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { invoices as invoicesApi, clients as clientsApi } from '../api/endpoints'
 import PaymentPlansSection from '../components/PaymentPlansSection'
+import SendEmailModal from '../components/SendEmailModal'
+import EmailHistory from '../components/EmailHistory'
 import logoInvoice from '../assets/logo-invoice.png'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import { Input, Select, Textarea } from '../components/ui/Input'
-import { ArrowLeft, Printer, Plus, Trash2, ChevronDown, CheckCircle, Edit, X, Save, Info } from 'lucide-react'
+import { ArrowLeft, Printer, Plus, Trash2, ChevronDown, CheckCircle, Edit, X, Save, Info, Mail } from 'lucide-react'
 import { format } from 'date-fns'
 
 const ALL_STATUSES = ['draft','estimated','confirmed','sent','partial','paid','overdue']
@@ -571,10 +573,11 @@ function InvoiceDocument({ invoice }) {
 export default function InvoiceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [invoice, setInvoice]     = useState(null)
-  const [editing, setEditing]     = useState(false)
-  const [saving, setSaving]       = useState(false)
+  const [invoice, setInvoice]       = useState(null)
+  const [editing, setEditing]       = useState(false)
+  const [saving, setSaving]         = useState(false)
   const [clientList, setClientList] = useState([])
+  const [emailOpen, setEmailOpen]   = useState(false)
 
   useEffect(() => {
     invoicesApi.get(id).then(res => setInvoice(res.invoice || res)).catch(() => {})
@@ -620,6 +623,9 @@ export default function InvoiceDetail() {
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               <Edit size={14} /> Edit
             </Button>
+            <Button variant="secondary" size="sm" onClick={() => setEmailOpen(true)}>
+              <Mail size={14} /> Send Email
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => window.print()} className="hidden sm:flex">
               <Printer size={14} /> Print
             </Button>
@@ -647,6 +653,14 @@ export default function InvoiceDetail() {
           client={{ name: invoice.client_name, accounts_email: invoice.client_email }}
         />
       )}
+
+      {!editing && <EmailHistory invoiceId={invoice.id} />}
+
+      <SendEmailModal
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        invoice={invoice}
+      />
 
       <style>{`
         @media print {

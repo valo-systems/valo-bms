@@ -65,3 +65,27 @@ export const team = {
   get:    (id)     => api.get(`/users/show.php?id=${id}`),
   update: (id, d)  => api.put(`/users/update.php?id=${id}`, d),
 }
+
+export const emailTemplates = {
+  list:   ()       => api.get('/emails/templates/index.php'),
+  get:    (id)     => api.get(`/emails/templates/show.php?id=${id}`),
+  create: (data)   => api.post('/emails/templates/create.php', data),
+  update: (id, d)  => api.put(`/emails/templates/update.php?id=${id}`, d),
+  delete: (id)     => api.delete(`/emails/templates/delete.php?id=${id}`),
+}
+
+export const emails = {
+  send:    (data)  => api.post('/emails/send.php', data),
+  preview: (data)  => api.post('/emails/preview.php', data),
+  log:     (params = {}) => api.get('/emails/log/index.php', { params }),
+}
+
+export const inbox = {
+  list:   (params = {}) => api.get('/emails/inbox/index.php', { params }),
+  markRead: (id)        => api.patch(`/emails/inbox/read.php?id=${id}`),
+  sync:   ()            => api.post('/emails/inbox/sync.php'),
+}
+
+export const invoicePdf = {
+  url: (id) => `/api/invoices/pdf.php?id=${id}`,
+}
