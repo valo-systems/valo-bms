@@ -4,7 +4,6 @@ require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use PhpImap\Mailbox;
-use PhpImap\Exceptions\ConnectionException;
 
 cors();
 auth_required();
@@ -30,13 +29,15 @@ try {
         null,
         'UTF-8'
     );
-    $mailIds = $mailbox->searchMailbox('UNSEEN');
+    // Fetch all mail — not just UNSEEN, since the email may have been opened in another client
+    $mailIds = $mailbox->searchMailbox('ALL');
 
     foreach ($mailIds as $mailId) {
         $mail = $mailbox->getMail($mailId, false);
 
-        $msgId     = trim((string)($mail->messageId ?? ''));
-        if (!$msgId) continue;
+        // Use Message-ID header; fall back to a synthetic ID so the message is never silently skipped
+        $msgId = trim((string)($mail->messageId ?? ''));
+        if (!$msgId) $msgId = 'synthetic-' . IMAP_USER . '-' . $mailId;
 
         $check = $pdo->prepare('SELECT id FROM email_inbox WHERE message_id = ? LIMIT 1');
         $check->execute([$msgId]);
@@ -87,8 +88,10 @@ try {
 
     ok(['imported' => $imported]);
 
-} catch (ConnectionException $e) {
-    fail('Could not connect to the mail server. Check IMAP credentials in config.', 500);
 } catch (\Exception $e) {
-    fail('Inbox sync failed: ' . $e->getMessage(), 500);
+    $msg = $e->getMessage();
+    if (stripos($msg, 'connect') !== false || stripos($msg, 'login') !== false || stripos($msg, 'auth') !== false) {
+        fail('Could not connect to the mail server. Check IMAP credentials in config.', 500);
+    }
+    fail('Inbox sync failed: ' . $msg, 500);
 }
