@@ -83,23 +83,28 @@ export default function Invoices() {
     setData(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv))
   }
 
+  const now = new Date()
+  const isEffectivelyOverdue = (inv) =>
+    inv.status === 'overdue' ||
+    (['sent', 'confirmed', 'partial', 'estimated'].includes(inv.status) && inv.due_date && new Date(inv.due_date) < now)
+
   const filtered = data.filter(inv => {
     const q = search.toLowerCase()
     const matchSearch = !q || inv.number?.toLowerCase().includes(q) || inv.client_name?.toLowerCase().includes(q)
     const matchFilter =
       filter === 'all'    ? true :
-      filter === 'unpaid' ? ['confirmed', 'sent', 'partial', 'estimated'].includes(inv.status) :
+      filter === 'unpaid' ? ['confirmed', 'sent', 'partial', 'estimated'].includes(inv.status) && !isEffectivelyOverdue(inv) :
       filter === 'paid'   ? inv.status === 'paid' :
-      filter === 'overdue'? inv.status === 'overdue' :
+      filter === 'overdue'? isEffectivelyOverdue(inv) :
       filter === 'draft'  ? inv.status === 'draft' : true
     return matchSearch && matchFilter
   })
 
   const total       = filtered.reduce((s, i) => s + parseFloat(i.total || 0), 0)
   const paidTotal   = data.filter(i => i.status === 'paid').reduce((s, i) => s + parseFloat(i.total || 0), 0)
-  const unpaidTotal = data.filter(i => ['confirmed','sent','partial','estimated'].includes(i.status))
+  const unpaidTotal = data.filter(i => ['confirmed','sent','partial','estimated'].includes(i.status) && !isEffectivelyOverdue(i))
                          .reduce((s, i) => s + parseFloat(i.total || 0), 0)
-  const overdueTotal = data.filter(i => i.status === 'overdue').reduce((s, i) => s + parseFloat(i.total || 0), 0)
+  const overdueTotal = data.filter(isEffectivelyOverdue).reduce((s, i) => s + parseFloat(i.total || 0), 0)
 
   return (
     <div className="space-y-6 max-w-6xl">

@@ -585,8 +585,14 @@ export default function InvoiceDetail() {
   }, [id])
 
   const handleStatusChange = async (status) => {
-    await invoicesApi.updateStatus(id, status)
-    setInvoice(prev => ({ ...prev, status }))
+    const prev = invoice.status
+    setInvoice(i => ({ ...i, status }))
+    try {
+      await invoicesApi.updateStatus(id, status)
+    } catch (err) {
+      setInvoice(i => ({ ...i, status: prev }))
+      alert('Could not update status: ' + (err?.error || 'check your connection'))
+    }
   }
 
   const handleSave = async (data) => {
