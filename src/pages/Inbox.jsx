@@ -12,6 +12,7 @@ export default function Inbox() {
   const [unread, setUnread]       = useState(0)
   const [expanded, setExpanded]   = useState(null)
   const [syncing, setSyncing]     = useState(false)
+  const [syncError, setSyncError] = useState('')
   const [replyTo, setReplyTo]     = useState(null)
   const [filter, setFilter]       = useState('all')
 
@@ -24,8 +25,9 @@ export default function Inbox() {
 
   const handleSync = async () => {
     setSyncing(true)
+    setSyncError('')
     try { await inbox.sync(); await load() }
-    catch (e) { alert(e?.error || 'Sync failed - check IMAP credentials') }
+    catch (e) { setSyncError(e?.error || 'Sync failed. Check IMAP credentials in your server config.') }
     finally { setSyncing(false) }
   }
 
@@ -52,6 +54,14 @@ export default function Inbox() {
           <RefreshCw size={13} /> Sync Inbox
         </Button>
       </div>
+
+      {syncError && (
+        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-400">
+          <span className="shrink-0 mt-0.5">&#9888;</span>
+          <span>{syncError}</span>
+          <button onClick={() => setSyncError('')} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">&times;</button>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-1 border-b border-valo-border pb-0">

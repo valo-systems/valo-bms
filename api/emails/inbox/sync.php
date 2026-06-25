@@ -3,56 +3,58 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/helpers.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-use Webklex\PHPIMAP\ClientManager;
+use PhpImap\Mailbox;
+use PhpImap\Exceptions\ConnectionException;
 
 cors();
 auth_required();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Method not allowed', 405);
 
-define('IMAP_HOST',     defined('_IMAP_HOST')     ? _IMAP_HOST     : (getenv('IMAP_HOST')     ?: 'mail.valosystems.co.za'));
-define('IMAP_PORT',     defined('_IMAP_PORT')      ? (int)_IMAP_PORT : (int)(getenv('IMAP_PORT') ?: 993));
-define('IMAP_ENCRYPT',  defined('_IMAP_ENCRYPT')   ? _IMAP_ENCRYPT  : (getenv('IMAP_ENCRYPT')  ?: 'ssl'));
-define('IMAP_USER',     defined('_IMAP_USER')      ? _IMAP_USER     : (getenv('IMAP_USER')     ?: 'billing@valosystems.co.za'));
-define('IMAP_PASS',     defined('_IMAP_PASS')      ? _IMAP_PASS     : (getenv('IMAP_PASS')     ?: ''));
+define('IMAP_HOST',    defined('_IMAP_HOST')    ? _IMAP_HOST    : (getenv('IMAP_HOST')    ?: 'mail.valosystems.co.za'));
+define('IMAP_PORT',    defined('_IMAP_PORT')     ? (int)_IMAP_PORT : (int)(getenv('IMAP_PORT') ?: 993));
+define('IMAP_ENCRYPT', defined('_IMAP_ENCRYPT')  ? _IMAP_ENCRYPT : (getenv('IMAP_ENCRYPT') ?: 'ssl'));
+define('IMAP_USER',    defined('_IMAP_USER')     ? _IMAP_USER    : (getenv('IMAP_USER')    ?: 'billing@valosystems.co.za'));
+define('IMAP_PASS',    defined('_IMAP_PASS')     ? _IMAP_PASS    : (getenv('IMAP_PASS')    ?: ''));
 
-$pdo = db();
+$pdo      = db();
 $imported = 0;
 
 try {
-    $cm = new ClientManager();
-    $client = $cm->make([
-        'host'          => IMAP_HOST,
-        'port'          => IMAP_PORT,
-        'encryption'    => IMAP_ENCRYPT,
-        'validate_cert' => true,
-        'username'      => IMAP_USER,
-        'password'      => IMAP_PASS,
-        'protocol'      => 'imap',
-    ]);
-    $client->connect();
+    $dsn = '{' . IMAP_HOST . ':' . IMAP_PORT . '/imap/' . IMAP_ENCRYPT . '/novalidate-cert}INBOX';
 
-    $folder   = $client->getFolder('INBOX');
-    $messages = $folder->messages()->unseen()->get();
+    $mailbox = new Mailbox(
+        $dsn,
+        IMAP_USER,
+        IMAP_PASS,
+        null,
+        'UTF-8'
+    );
+    $mailIds = $mailbox->searchMailbox('UNSEEN');
 
-    foreach ($messages as $message) {
-        $msgId = (string)$message->getMessageId();
+    foreach ($mailIds as $mailId) {
+        $mail = $mailbox->getMail($mailId, false);
+
+        $msgId     = trim((string)($mail->messageId ?? ''));
         if (!$msgId) continue;
 
-        // Skip if already stored
         $check = $pdo->prepare('SELECT id FROM email_inbox WHERE message_id = ? LIMIT 1');
         $check->execute([$msgId]);
         if ($check->fetch()) continue;
 
-        $inReplyTo   = (string)($message->getInReplyTo() ?? '');
-        $fromAddress = (string)($message->getFrom()[0]->mail ?? '');
-        $fromName    = (string)($message->getFrom()[0]->personal ?? '');
-        $subject     = (string)$message->getSubject();
-        $bodyText    = (string)$message->getTextBody();
-        $bodyHtml    = (string)$message->getHTMLBody();
-        $receivedAt  = $message->getDate()?->toDateTimeString();
+        // Extract In-Reply-To from raw headers (not a direct property in this library version)
+        $inReplyTo = '';
+        if (!empty($mail->headersRaw) && preg_match('/^In-Reply-To:\s*(.+)$/mi', $mail->headersRaw, $m)) {
+            $inReplyTo = trim($m[1]);
+        }
 
-        // Try to link to an outbound email log via In-Reply-To
+        $fromAddress = (string)($mail->fromAddress ?? '');
+        $fromName    = (string)($mail->fromName    ?? '');
+        $subject     = (string)($mail->subject     ?? '');
+        $bodyText    = (string)($mail->textPlain   ?? '');
+        $bodyHtml    = (string)($mail->textHtml    ?? '');
+        $receivedAt  = $mail->date ? date('Y-m-d H:i:s', strtotime($mail->date)) : null;
+
         $logId     = null;
         $invoiceId = null;
         $clientId  = null;
@@ -68,7 +70,6 @@ try {
             }
         }
 
-        // Try to match client by from address if not already linked
         if (!$clientId && $fromAddress) {
             $cStmt = $pdo->prepare('SELECT id FROM clients WHERE email = ? OR accounts_email = ? LIMIT 1');
             $cStmt->execute([$fromAddress, $fromAddress]);
@@ -84,9 +85,10 @@ try {
         $imported++;
     }
 
-    $client->disconnect();
     ok(['imported' => $imported]);
 
+} catch (ConnectionException $e) {
+    fail('Could not connect to the mail server. Check IMAP credentials in config.', 500);
 } catch (\Exception $e) {
-    fail('IMAP sync failed: ' . $e->getMessage(), 500);
+    fail('Inbox sync failed: ' . $e->getMessage(), 500);
 }
