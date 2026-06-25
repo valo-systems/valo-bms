@@ -34,8 +34,9 @@ function StatusDropdown({ invoice, onUpdated }) {
     try {
       await invoicesApi.updateStatus(invoice.id, status)
       onUpdated(invoice.id, status)
-    } catch {}
-    finally { setLoading(false) }
+    } catch (e) {
+      alert('Could not update status: ' + (e?.error || 'check your connection'))
+    } finally { setLoading(false) }
   }
 
   return (

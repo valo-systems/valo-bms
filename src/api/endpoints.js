@@ -19,7 +19,7 @@ export const invoices = {
   create: (data) => api.post('/invoices/create.php', data),
   update: (id, data) => api.put(`/invoices/update.php?id=${id}`, data),
   delete: (id) => api.delete(`/invoices/delete.php?id=${id}`),
-  updateStatus: (id, status) => api.patch(`/invoices/status.php?id=${id}`, { status }),
+  updateStatus: (id, status) => api.post(`/invoices/status.php?id=${id}`, { status }),
 }
 
 export const expenses = {
@@ -82,7 +82,7 @@ export const emails = {
 
 export const inbox = {
   list:   (params = {}) => api.get('/emails/inbox/index.php', { params }),
-  markRead: (id)        => api.patch(`/emails/inbox/read.php?id=${id}`),
+  markRead: (id)        => api.post(`/emails/inbox/read.php?id=${id}`),
   sync:   ()            => api.post('/emails/inbox/sync.php'),
 }
 

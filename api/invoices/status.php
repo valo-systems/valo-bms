@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/helpers.php';
 cors();
 auth_required();
 
+if (!in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PATCH', 'PUT'])) fail('Method not allowed', 405);
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) fail('ID required');
 $b = body();
