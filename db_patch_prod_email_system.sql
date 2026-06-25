@@ -2,6 +2,8 @@
 -- Run ONCE on prod: mysql -u <user> <db> < db_patch_prod_email_system.sql
 -- Safe to re-run — uses CREATE TABLE IF NOT EXISTS and INSERT ... ON DUPLICATE KEY UPDATE
 
+USE valosyst_bms;
+
 -- ── Tables ───────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS email_templates (
