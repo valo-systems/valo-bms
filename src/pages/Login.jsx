@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { auth } from '../api/endpoints'
 import Button from '../components/ui/Button'
@@ -96,9 +96,14 @@ export default function Login() {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="block text-valo-subtle text-xs font-medium uppercase tracking-wide">
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-valo-subtle text-xs font-medium uppercase tracking-wide">
+                  Password
+                </label>
+                <Link to="/forgot-password" className="text-xs text-valo-subtle hover:text-valo-accent transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}

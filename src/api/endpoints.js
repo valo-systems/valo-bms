@@ -1,8 +1,10 @@
 import api from './client'
 
 export const auth = {
-  login: (email, password) => api.post('/auth/login.php', { email, password }),
-  me: () => api.get('/auth/me.php'),
+  login:  (email, password)    => api.post('/auth/login.php',  { email, password }),
+  me:     ()                   => api.get('/auth/me.php'),
+  forgot: (email)              => api.post('/auth/forgot.php', { email }),
+  reset:  (token, password)    => api.post('/auth/reset.php',  { token, password }),
 }
 
 export const clients = {
